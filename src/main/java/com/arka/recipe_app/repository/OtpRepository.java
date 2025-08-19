@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<OtpValidator,String> {
 
-    OtpValidator findOtpValidatorById(String sessionId);
+    Optional<OtpValidator> findOtpValidatorById(String sessionId);
 
     Optional<OtpValidator> findFirstByEmailOrderByOtpGeneratedAtDesc(String email);
 

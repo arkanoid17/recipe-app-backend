@@ -1,13 +1,19 @@
 package com.arka.recipe_app.services.auth;
 
+import com.arka.recipe_app.exception.OtpException;
 import com.arka.recipe_app.models.entity.OtpValidator;
 import com.arka.recipe_app.repository.OtpRepository;
+import com.arka.recipe_app.services.email.EmailService;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.swing.text.html.Option;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Date;
 import java.util.Optional;
 
 @Component
@@ -19,6 +25,9 @@ public class OtpHandler {
 
     @Autowired
     private OtpRepository otpRepository;
+
+    @Autowired
+    EmailService emailService;
 
     public OtpValidator generateOtp(String email) {
         Optional<OtpValidator> otpOptional = otpRepository.findFirstByEmailOrderByOtpGeneratedAtDesc(email);
@@ -42,6 +51,32 @@ public class OtpHandler {
         return saveOtp(otp);
     }
 
+    public boolean otpValidation(String sessionId, String otp){
+        Optional<OtpValidator> otpOptional = otpRepository.findOtpValidatorById(sessionId);
+        if(!otpOptional.isPresent()){
+            throw new OtpException("Invalid Session-ID!");
+        }
+        OtpValidator otpVal = otpOptional.get();
+
+        if(otpVal.isValidated){
+            throw new OtpException("Otp validated previously!");
+        }
+
+        if(!withinDuration(otpVal)){
+            throw new OtpException("Otp timed out!");
+        }
+
+        boolean isValid = otp.equalsIgnoreCase(otpVal.getOtp());
+
+        if(isValid){
+            otpVal.setValidated(true);
+            otpVal.setValidatedAt(LocalDateTime.now());
+            otpRepository.save(otpVal);
+        }
+
+        return isValid;
+    }
+
     public boolean withinDuration(OtpValidator otpValidator) {
         // Check if the OTP is still valid based on the duration
         long currentTime = System.currentTimeMillis();
@@ -56,9 +91,13 @@ public class OtpHandler {
     }
 
     private void sendOtp(String email, String otp) {
-        // Logic to send OTP to the user's email
-        // This could involve using an email service to send the OTP
-        // For now, we will just print the OTP to the console
+        try {
+            emailService.sendOtpEMail(email, otp);
+        }catch (MessagingException e){
+            throw new OtpException("Failed to send otp to " + email, e);
+        }catch (IOException e){
+            throw new OtpException("Failed to load email template for " + email, e);
+        }
         System.out.println("OTP sent to " + email + ": " + otp);
     }
 

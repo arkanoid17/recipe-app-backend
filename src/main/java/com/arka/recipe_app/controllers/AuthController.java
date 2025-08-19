@@ -4,6 +4,7 @@ import com.arka.recipe_app.mapper.OtpMapper;
 import com.arka.recipe_app.mapper.UserMapper;
 import com.arka.recipe_app.models.domain.CreateUpdateUser;
 import com.arka.recipe_app.models.domain.OtpRequestObj;
+import com.arka.recipe_app.models.domain.OtpValidationObj;
 import com.arka.recipe_app.models.dto.OtpDto;
 import com.arka.recipe_app.models.dto.UserDto;
 import com.arka.recipe_app.models.entity.OtpValidator;
@@ -36,6 +37,14 @@ public class AuthController {
     public ResponseEntity<OtpDto> sendOtp(@Valid @RequestBody OtpRequestObj otpRequestObj) {
         OtpValidator validator = authService.sendOtp(otpRequestObj.getEmail());
         return ResponseEntity.ok(OtpMapper.fromOtpValidatorToOtpDto(validator.getId(),validator.getEmail()));
+    }
+
+
+    @PostMapping("/otp/validate")
+    public ResponseEntity<String> validateOtp(@Valid @RequestBody OtpValidationObj otpValidationObj){
+        authService.validateOtp(otpValidationObj.getSessionId(), otpValidationObj.getOtp());
+
+        return ResponseEntity.ok("Otp validated successfully!");
     }
 
 }
